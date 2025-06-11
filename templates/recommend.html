@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Movie Recommendations</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(to right, #1f4037, #99f2c8);
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #222;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .logout-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: black;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: transform 0.3s ease, background-color 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logout-button:hover {
+            transform: scale(1.1);
+            background-color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        h1, h2 {
+            color: #1f4037;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        select, button {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            background-color: #1f4037;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #145c42;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        li {
+            background: #f0f0f0;
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 5px;
+            transition: transform 0.2s;
+        }
+
+        li:hover {
+            transform: scale(1.02);
+            background-color: #e0f7fa;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Welcome, {{ username }}</h1>
+        <a href="/logout" class="logout-button">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </header>
+
+    <div class="container">
+     <div class="container">
+
+    <h2>Search Movies to Rate</h2>
+    <form method="POST" action="{{ url_for('recommend') }}">
+        <input type="text" name="search" placeholder="Search movie title" value="{{ search_term }}" required
+            style="padding:10px; font-size:16px; border-radius:5px; border:1px solid #ccc; width: 100%; max-width: 400px; margin-bottom: 15px;">
+        <button type="submit">Search</button>
+    </form>
+
+    {% if search_results %}
+        <h3>Search Results ({{ search_results|length }})</h3>
+        <ul>
+            {% for movieId, title in search_results %}
+                <li>
+                    {{ title }}
+                    <form method="POST" action="{{ url_for('recommend') }}" style="display:inline; margin-left: 15px;">
+                        <input type="hidden" name="movieId" value="{{ movieId }}" />
+                        <select name="rating" required style="padding:6px; font-size:14px; border-radius:4px; border:1px solid #ccc;">
+                            <option value="">Rate</option>
+                            <option value="1">1 - Poor</option>
+                            <option value="2">2</option>
+                            <option value="3">3 - Average</option>
+                            <option value="4">4</option>
+                            <option value="5">5 - Excellent</option>
+                        </select>
+                        <button type="submit" style="padding:6px 12px; font-size:14px; border-radius:4px; background-color:#1f4037; color:white; border:none; cursor:pointer; margin-left:5px;">Submit</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% elif search_term %}
+        <p>No movies found matching "{{ search_term }}"</p>
+    {% endif %}
+
+    <hr style="margin: 30px 0;">
+
+    <h2>Rate a Movie</h2>
+    <form method="POST" action="{{ url_for('recommend') }}">
+        <select name="movieId" required>
+            {% for movie in movies %}
+            <option value="{{ movie[0] }}">{{ movie[1] }}</option>
+            {% endfor %}
+        </select>
+
+        <select name="rating" required>
+            <option value="1">1 - Poor</option>
+            <option value="2">2</option>
+            <option value="3">3 - Average</option>
+            <option value="4">4</option>
+            <option value="5">5 - Excellent</option>
+        </select>
+
+        <button type="submit">Submit Rating</button>
+    </form>
+
+    <h2>Recommended Movies For You</h2>
+    <ul>
+        {% for rec in recommendations %}
+        <li>{{ rec }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+
+</body>
+</html>
