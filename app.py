@@ -6,14 +6,14 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import numpy as np
 import os
 
+load_dotenv()
 
-# Clear session once at first request after restart
 session_cleared = False
 
 
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = os.environ.get('SECRET_KEY')
 
 @app.before_request
 def clear_session_on_first_request():
@@ -75,7 +75,7 @@ def init_db():
 
 def load_csv_data():
     with sqlite3.connect(DATABASE, timeout=10) as db:
-        # Load movies.csv
+        
         movies_path = os.path.join('data', 'movies.csv')
         if os.path.exists(movies_path):
             movies_df = pd.read_csv(movies_path)
@@ -88,7 +88,7 @@ def load_csv_data():
                 except Exception as e:
                     print(f"Error inserting movie {row['title']}: {e}")
 
-        # Load ratings.csv
+       
         ratings_path = os.path.join('data', 'ratings.csv')
         if os.path.exists(ratings_path):
             ratings_df = pd.read_csv(ratings_path)
@@ -102,15 +102,6 @@ def load_csv_data():
                     print(f"Error inserting rating for user {row['userId']} movie {row['movieId']}: {e}")
 
         db.commit()
-
-
-
-
-
-
-
-
-
 
 
 @app.route('/')
@@ -166,39 +157,38 @@ def content_based_recommendations(user_ratings, top_n=5):
     db = get_db()
     movies_df = pd.read_sql_query("SELECT * FROM movies", db)
 
-    # If no movies in DB at all, return empty list immediately
+   
     if movies_df.empty:
         return []
 
-    # If user has no ratings, return random popular movies (safe sample)
+    
     if not user_ratings:
         n = min(top_n, len(movies_df))
         return movies_df.sample(n)['title'].tolist()
 
-    # Create TF-IDF matrix on genres
+   
     tfidf = TfidfVectorizer(token_pattern=r'[a-zA-Z0-9\-]+')
     tfidf_matrix = tfidf.fit_transform(movies_df['genres'].fillna(''))
 
-    # Map movieId to index
+  
     movie_id_to_idx = pd.Series(movies_df.index, index=movies_df['movieId']).to_dict()
 
-    # Compute user profile vector by weighted sum of rated movie genre vectors
+   
     user_vec = np.zeros(tfidf_matrix.shape[1])
     for movieId, rating in user_ratings.items():
         idx = movie_id_to_idx.get(movieId)
         if idx is not None:
             user_vec += rating * tfidf_matrix[idx].toarray()[0]
 
-    # If user profile vector is zero (no matching genres), fallback to random sample
+   
     if np.linalg.norm(user_vec) == 0:
         n = min(top_n, len(movies_df))
         return movies_df.sample(n)['title'].tolist()
 
-    # Compute cosine similarity between user profile and all movies
     sim_scores = cosine_similarity([user_vec], tfidf_matrix).flatten()
     sim_scores_idx = sim_scores.argsort()[::-1]
 
-    # Filter out movies already rated and build recommendations
+   
     recommended_titles = []
     for idx in sim_scores_idx:
         movieId = movies_df.iloc[idx]['movieId']
@@ -223,7 +213,7 @@ def recommend():
     db = get_db()
 
     if request.method == 'POST':
-        # Check if this POST is a rating submission
+       
         if 'movieId' in request.form and 'rating' in request.form:
             movieId = int(request.form['movieId'])
             rating = float(request.form['rating'])
@@ -234,17 +224,16 @@ def recommend():
                 db.execute('INSERT INTO ratings (userId, movieId, rating) VALUES (?, ?, ?)', (user_id, movieId, rating))
             db.commit()
         
-        # Check if this POST is a search submission
+        
         if 'search' in request.form:
             search_term = request.form['search']
             like_pattern = f"%{search_term}%"
             search_results = query_db('SELECT movieId, title FROM movies WHERE title LIKE ? LIMIT 50', (like_pattern,))
 
-    # Get user ratings for recommendations
     user_ratings = get_user_ratings(user_id)
     recommendations = content_based_recommendations(user_ratings)
 
-    # Get movies for rating input on the main page (limit 50)
+    
     movies = query_db('SELECT movieId, title FROM movies LIMIT 50')
 
     return render_template('recommend.html',
@@ -255,11 +244,11 @@ def recommend():
                            search_term=search_term)
 
 
-    # Get user ratings
+ 
     user_ratings = get_user_ratings(session['user_id'])
     recommendations = content_based_recommendations(user_ratings)
 
-    # For UI: Show a list of movies for rating input
+   
     db = get_db()
     movies = query_db('SELECT movieId, title FROM movies LIMIT 50')
 
